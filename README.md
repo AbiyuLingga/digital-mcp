@@ -91,6 +91,22 @@ PNG 导出需要以下任意一种程序：`rsvg-convert`、`magick`、`convert`
 `NOr`、`Not`、`Clock`、`Const`、`Ground`、`VDD` 和 `Testcase`。
 需要完整字段或引脚规则时，先调用 `digital_design_schema`。
 
+Element coordinates must be integers divisible by 20. Digital snaps components
+to this grid when copying or editing them; off-grid positions can disconnect
+their wires. Inverted gate outputs (`NAnd`, `NOr`, `XNOr`) are at `(x + 80, y + 20)`.
+
+Circuit layout guidelines:
+
+- Use horizontal and vertical wires with 90-degree bends.
+- Enter gate inputs horizontally from the left. Put bends outside the gate,
+  preferably 40 units before the pin, rather than along the gate's left edge.
+- Keep branches separate and avoid duplicate or overlapping wire segments.
+- Keep the layout readable without forcing every gate into rigid rows.
+- Preserve connectivity and logic when rearranging a circuit. Check pin
+  endpoints after an editor copy, and test actual behavior rather than only
+  using don't-care (`X`) expected outputs. Inspect the exported SVG as well.
+- Preserve unsaved editor changes by writing repairs to a clearly named copy.
+
 ### `digital_inspect_circuit` 和 `digital_run_tests`
 
 ```json

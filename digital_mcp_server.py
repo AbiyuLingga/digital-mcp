@@ -116,6 +116,8 @@ def _pin(element: dict[str, Any], pin: Any, output: bool) -> tuple[int, int]:
             return x, y
         if kind in {"Not", "Buffer"}:
             return x + 40, y
+        if kind in {"NAnd", "NOr", "XNOr"}:
+            return x + 80, y + 20
         return x + 60, y + 20
     index = int(pin or 0)
     if kind in {"Out", "Probe"}:
@@ -186,8 +188,13 @@ def build_circuit(design: dict[str, Any], output: Path) -> dict[str, Any]:
             attrs["Testdata"] = _test_data(design["tests"])
         _element_attributes(ve, attrs)
         pos = ET.SubElement(ve, "pos")
-        pos.set("x", str(_number(element.get("x", element.get("pos", {}).get("x", 0)), "element.x")))
-        pos.set("y", str(_number(element.get("y", element.get("pos", {}).get("y", 0)), "element.y")))
+        for axis in ("x", "y"):
+            value = element.get(axis, element.get("pos", {}).get(axis, 0))
+            coordinate = _number(value, f"element.{axis}")
+            # ponytail: reject off-grid positions; snapping gates alone detaches wires.
+            if value != coordinate or coordinate % 20:
+                raise ToolError(f"element {element_id!r} {axis} must be on the 20-unit grid")
+            pos.set(axis, str(coordinate))
     wires_node = ET.SubElement(root, "wires")
     for wire in wires:
         if not isinstance(wire, dict):
@@ -649,6 +656,9 @@ TOOLS = [
 
 
 SCHEMA = {"elements": [{"id": "a", "type": "In", "label": "A", "x": 200, "y": 100}, {"id": "b", "type": "In", "label": "B", "x": 200, "y": 140}, {"id": "and1", "type": "And", "x": 240, "y": 100}, {"id": "y", "type": "Out", "label": "Y", "x": 340, "y": 120}], "wires": [{"from": "a", "to": "and1", "input": 0}, {"from": "b", "to": "and1", "input": 1}, {"from": "and1", "to": "y"}], "tests": [{"inputs": {"A": 0, "B": 0}, "outputs": {"Y": 0}}, {"inputs": {"A": 1, "B": 1}, "outputs": {"Y": 1}}], "supported_types": ["In", "Out", "And", "Or", "XOr", "XNOr", "NAnd", "NOr", "Not", "Clock", "Const", "Ground", "VDD", "Testcase"], "wire_note": "For uncommon elements, use explicit p1/p2 coordinates. Common gate inputs are spaced 40 units vertically."}
+
+
+SCHEMA["element_grid"] = {"step": 20, "note": "Element x/y must be integer multiples of 20 to preserve wires when Digital copies or edits the circuit."}
 
 
 def call_tool(name: str, args: dict[str, Any]) -> Any:
