@@ -67,7 +67,3 @@ For the full design schema and supported components, call `digital_design_schema
 python3 -m unittest discover -v
 python3 -m py_compile digital_mcp_server.py
 ```
-
-## Contributor
-
-- [AbiyuLingga](https://github.com/AbiyuLingga) — [abiyu3587@gmail.com](mailto:abiyu3587@gmail.com)
