@@ -11,3 +11,10 @@ license = {text = "GPL-3.0-or-later"}
 
 [project.scripts]
 digital-mcp-server = "digital_mcp_server:main"
+
+[tool.setuptools]
+py-modules = ["digital_mcp_server"]
+packages = ["digital_mcp_live"]
+
+[tool.setuptools.package-data]
+digital_mcp_live = ["LiveDigital.java"]
