@@ -847,7 +847,7 @@ TOOLS = [
     {"name": "digital_export_rendered_image", "description": "Export a rendered image of a .dig circuit. format=svg reuses Digital's CLI SVG export; format=png (default) generates the SVG first, then converts it at the requested pixel width with DIGITAL_SVG_CONVERTER or rsvg-convert/magick/convert/inkscape from PATH.", "inputSchema": {"type": "object", "required": ["path"], "properties": {"path": {"type": "string"}, "format": {"type": "string", "enum": ["svg", "png"], "default": "png"}, "output_path": {"type": "string"}, "pixel_width": {"type": "integer", "default": 2048}, "timeout_seconds": {"type": "integer", "default": 30}}}},
     {"name": "digital_export_simulation_image", "description": "Apply input/button states such as {A: 1, B: 0}, render the live Digital model, and export a high-resolution SVG or PNG snapshot. The circuit is simulated headlessly; the GUI is not driven.", "inputSchema": {"type": "object", "required": ["path"], "properties": {"path": {"type": "string"}, "inputs": {"type": "object", "additionalProperties": {"oneOf": [{"type": "integer"}, {"type": "boolean"}, {"type": "string"}]}}, "format": {"type": "string", "enum": ["svg", "png"], "default": "png"}, "output_path": {"type": "string"}, "pixel_width": {"type": "integer", "default": 2048}, "scale": {"type": "integer", "default": 15}, "hide_test": {"type": "boolean", "default": True}, "timeout_seconds": {"type": "integer", "default": 30}}}},
     {"name": "digital_export_truth_table_image", "description": "Read embedded Digital Testcase data, validate it with Digital's simulator, and export a polished truth-table/results image as SVG or high-resolution PNG.", "inputSchema": {"type": "object", "required": ["path"], "properties": {"path": {"type": "string"}, "format": {"type": "string", "enum": ["svg", "png"], "default": "png"}, "output_path": {"type": "string"}, "pixel_width": {"type": "integer", "default": 2048}, "timeout_seconds": {"type": "integer", "default": 30}}}},
-    {"name": "digital_design_schema", "description": "Return the structured design schema and supported common gate pin conventions.", "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "digital_design_schema", "description": "Return the design schema, common gate pin conventions and checked circuit_reference entries from Brown/Vranesic, Fundamentals of Digital Logic with VHDL Design, third edition. Read the matching reference before designing a circuit, cite its figure/page and distinguish book behavior from adaptations.", "inputSchema": {"type": "object", "properties": {}}},
 ]
 
 
@@ -855,6 +855,46 @@ SCHEMA = {"elements": [{"id": "a", "type": "In", "label": "A", "x": 200, "y": 10
 
 
 SCHEMA["element_grid"] = {"step": 20, "note": "Element x/y must be integer multiples of 20 to preserve wires when Digital copies or edits the circuit."}
+
+SCHEMA["circuit_reference"] = {
+    "title": "Fundamentals of Digital Logic with VHDL Design",
+    "authors": ["Stephen Brown", "Zvonko Vranesic"],
+    "edition": 3,
+    "publisher": "McGraw-Hill",
+    "year": 2009,
+    "isbn": "978-0-07-352953-0",
+    "source_pdf": "Fundamentals-of-Digital-Logic-with-VHDL-Design-3rd-edition.pdf",
+    "page_note": "Printed pages identify the book; one-based PDF pages apply only to the checked 961-page copy. The PDF is not bundled or read at runtime.",
+    "entries": {
+        "d_latch": {
+            "section": "7.3", "figure": "7.8", "printed_page": 389, "pdf_page": 410,
+            "behavior": "Level-sensitive: Clk=1 follows D; Clk=0 holds Q.",
+            "structure": "Inverter, two NAND input gates, cross-coupled NAND latch.",
+        },
+        "master_slave_d": {
+            "section": "7.4.1", "figure": "7.10", "printed_page": 392, "pdf_page": 413,
+            "behavior": "Falling-edge output: master transparent high, slave transparent low.",
+            "structure": "Two gated D latches on opposite clock phases; use figure 7.8 when expanding the latch blocks into gates.",
+        },
+        "t_flip_flop": {
+            "section": "7.5", "figure": "7.16", "printed_page": 399, "pdf_page": 420,
+            "behavior": "At the rising edge, T=0 holds Q and T=1 toggles Q.",
+            "structure": "Rising-edge D flip-flop with D = NOT(T) AND Q OR T AND NOT(Q).",
+            "adaptation": "D = T XOR Q is equivalent, but the book figure uses AND/OR gates and an inverter. Using the falling-edge master-slave design changes the active edge unless adapted.",
+        },
+        "jk_flip_flop": {
+            "section": "7.6", "figure": "7.17", "printed_page": 400, "pdf_page": 421,
+            "behavior": "At the rising edge, JK=00 holds, 01 resets, 10 sets, 11 toggles.",
+            "structure": "Rising-edge D flip-flop with D = J AND NOT(Q) OR NOT(K) AND Q.",
+        },
+    },
+    "agent_rules": [
+        "Prefer these checked book references for matching circuits; cite authors, edition, section, figure and printed page in the result explanation.",
+        "These are verified summaries, not runtime access to the book. Inspect the local PDF before claiming direct diagram inspection or citing additional topics.",
+        "State the active clock edge or enable polarity and label every equivalent gate substitution, clock inversion or reset addition as an adaptation.",
+        "Preserve Digital grid/pin/wire layout conventions and test transparency, hold, sampling/toggle, initialization and non-active-edge behavior as appropriate.",
+    ],
+}
 
 
 def call_tool(name: str, args: dict[str, Any]) -> Any:
@@ -950,7 +990,7 @@ def main() -> None:
             method = request.get("method")
             request_id = request.get("id")
             if method == "initialize":
-                response(request_id, {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "digital-mcp", "version": "0.1.0"}, "instructions": "For live circuit creation, call digital_live_start early, then digital_live_append frequently with small groups of components and orthogonal wires as you design. Do not prepare the complete circuit before starting. Finally call digital_live_finish with meaningful tests when available. The user watches a read-only draft and edits after finish. Never describe an untested circuit as validated."})
+                response(request_id, {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "digital-mcp", "version": "0.1.0"}, "instructions": "For circuit designs, call digital_design_schema and consult circuit_reference. Prefer the checked references from Brown and Vranesic, Fundamentals of Digital Logic with VHDL Design, third edition, and cite section, figure and printed page in your explanation. State the active clock edge and label adaptations. Do not claim runtime PDF access or invent references outside the checked entries. For live circuit creation, call digital_live_start early, then digital_live_append frequently with small groups of components and orthogonal wires as you design. Do not prepare the complete circuit before starting. Finally call digital_live_finish with meaningful tests when available. The user watches a read-only draft and edits after finish. Never describe an untested circuit as validated."})
             elif method == "notifications/initialized":
                 continue
             elif method == "ping":

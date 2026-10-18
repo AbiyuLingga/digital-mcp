@@ -87,6 +87,10 @@ The Linux desktop integration is checked against Digital v0.30. Windows and macO
 
 For the full design schema and supported components, call `digital_design_schema` from your MCP client.
 
+## Circuit reference
+
+Circuit logic should follow Brown and Vranesic's *Fundamentals of Digital Logic with VHDL Design*, third edition (2009), where applicable. See [the verified circuit references](CIRCUIT_REFERENCES.md) for D latch, master-slave D, T, and JK flip-flops. `digital_design_schema` also returns these references, including clock behavior and figure/page numbers. Digital layouts may be adapted; the PDF is not included.
+
 ## Validate locally
 
 ```bash
